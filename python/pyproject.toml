@@ -24,13 +24,16 @@ maintainers = [
   {name = "Chris Joakim", email = "christopher.joakim@gmail.com"}
 ]
 description = "POC on how to extract Claude Code usage from the various ~./claude/ files and emit telemetry to OTEL/Azure"
-readme = "README.md"
+readme = "readme.md"
 license = "MIT"
-license-files = ["LICENSE"]
+license-files = []
 keywords = ["claude code", "usage", "telemetry", "otel", "azure"]
 classifiers = [
   "Programming Language :: Python"
 ]
+
+[tool.setuptools]
+packages = []
 
 [project.urls]
 Homepage = "https://github.com/cjoakim/claude-code-telemetry"
