@@ -1,19 +1,19 @@
 # Usage:
-#   docker compose -f otel-compose.yml up
-#   docker compose -f otel-compose.yml down
+#   docker compose -f otel-collector.yml up
+#   docker compose -f otel-collector.yml down
 #
 # Ports:
 #   4317: gRPC OTLP
 #   4318: HTTP OTLP (Claude Code)
-#   16686: Jaeger UI
+#   55679: zpages extension
 #
 # Chris Joakim, 2026
 
 services:
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    container_name: jaeger
+  otel-collector:
+    image: otel/opentelemetry-collector:0.154.0
+    container_name: otel-collector
     ports:
-      - "4317:4317"
-      - "4318:4318"
-      - "16686:16686"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:55679:55679"
