@@ -1,5 +1,5 @@
 # claude-code-telemetry
-
+http
 POC on how to extract **Claude Code** usage from the various ~./claude/ files 
 and **emit telemetry to OTEL/Azure**.
 
@@ -33,7 +33,7 @@ This repo explores three ways to solve this problem:
 
 ---
 
-## Part 1 : Implement OTEL to localhost per the Claude Code Documentation
+## Solution 1 : Implement OTEL to localhost per the Claude Code Documentation
 
 See https://code.claude.com/docs/en/monitoring-usage
 
@@ -142,13 +142,36 @@ f0480e735356
 
 ---
 
-## Part 2 : Implement OTEL to Azure per the Claude Code Documentation
+## Solution 2 : Implement OTEL to Azure per the Claude Code Documentation
 
-See https://code.claude.com/docs/en/monitoring-usage
+This solution is similar to #1, but it sends the telemetry to Azure PaaS
+services rather than a localhost process.
+
+Provision instances of **Azure Application Insights** and **Azure Log Analytics**.
+
+Documentation Links:
+- https://learn.microsoft.com/en-us/azure/azure-monitor/app/app-insights-overview
+- https://learn.microsoft.com/en-us/azure/azure-monitor/containers/opentelemetry-protocol-ingestion
+
+When you provision Azure Application Insights, be sure to enable OTEL as shown below:
+
+<p align="center">
+   <img src="docs/img/provision-app-insights-with-otel.png" width="80%">
+</p>
+
+Configure the Application Instights **Diagnostic Settings** to send all data
+to your Azure Log Analytics workspace:
+
+<p align="center">
+   <img src="docs/img/app-insights-diagnostic-settings.png" width="80%">
+</p>
+
+As noted in the [above documentation link](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/opentelemetry-protocol-ingestion) **Microsoft Entra authentication** is required.
+Therefore, Solution 2 will be explored at a later date.
 
 ---
 
-## Part 3: Custom Python-based solution to emit OTEL telemetry
+## Solution 3: Custom Python-based solution to emit OTEL telemetry
 
 - Claude Code writes local files to the ~/.claude/ directory as it executes
   - This directory structure doesn't seem to be documented
