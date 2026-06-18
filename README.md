@@ -107,27 +107,37 @@ docker compose -f jaeger-compose.yml up
 ```
 
 Reopen Claude Code and enter a prompt like the following:
-```
-chat is the capital of belgium?
-```
+<p align="center">
+   <img src="docs/img/capital-of-belgium.png" width="30%">
+</p>
 
 Then visit **http://localhost:16686/** with your browser and enter
 search criteria like the following, then click "Find Traces".
 
 <p align="center">
-   <img src="docs/img/jaeger-ui-1" width="80%">
+   <img src="docs/img/jaeger-ui-1.png" width="80%">
 </p>
 
 You should then be able to click-into a search result and see detail like the following.
 You can click into these traces to see the token utilization, models used, and elapsed times.
 
 <p align="center">
-   <img src="docs/img/jaeger-ui-2" width="80%">
+   <img src="docs/img/jaeger-ui-2.png" width="80%">
 </p>
 
 Be sure to stop the Docker container when appropriate:
 ```
 docker compose -f jaeger-compose.yml down
+```
+
+Be sure to check that no container are still running with the **docker ps** command,
+then stop them with the **docker stop** command as shown below.
+```
+docker ps
+f0480e735356   jaegertracing/all-in-one:latest   "/go/bin/all-in-one-…"   22 minutes ago   Up 22 minutes   0.0.0.
+
+docker stop f0480e735356
+f0480e735356
 ```
 
 ---
