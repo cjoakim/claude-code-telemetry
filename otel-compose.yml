@@ -1,18 +1,25 @@
 # Usage:
-#   docker compose -f otel-collector.yml up
-#   docker compose -f otel-collector.yml down
+#   docker compose -f otel-compose.yml up
+#   docker compose -f otel-compose.yml down
 #
 # Ports:
 #   4317: gRPC OTLP
 #   4318: HTTP OTLP (Claude Code)
 #   55679: zpages extension
 #
+# Output:
+#   ./otel-logs/telemetry.jsonl  (one JSON record per line, rotated at 100 MB)
+#
 # Chris Joakim, 2026
 
 services:
   otel-collector:
-    image: otel/opentelemetry-collector:0.154.0
+    image: otel/opentelemetry-collector-contrib:0.154.0
     container_name: otel-collector
+    command: ["--config=/etc/otel/config.yml"]
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel/config.yml
+      - ./otel-logs:/var/log/otel
     ports:
       - "127.0.0.1:4317:4317"
       - "127.0.0.1:4318:4318"
