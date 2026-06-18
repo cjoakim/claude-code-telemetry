@@ -1,0 +1,46 @@
+[project]
+name = "claude-code-telemetry"
+version = "0.1.0"
+
+dependencies = [
+  "azure-monitor-opentelemetry>=1.8.8",
+  "opentelemetry-api>=1.40.0",
+  "docopt>=0.6.2",
+  "Jinja2>=3.1.6",
+  "pylint>=4.0.6",
+  "pytest-asyncio>=0.25.2",
+  "pytest-cov>=7.1.0",
+  "pytest-randomly>=4.1.0",
+  "pytest>=9.0.3",
+  "python-dotenv>=1.2.2",
+  "watchdog>=6.0.0",
+]
+
+requires-python = ">=3.13"
+authors = [
+  {name = "Chris Joakim", email = "christopher.joakim@gmail.com"}
+]
+maintainers = [
+  {name = "Chris Joakim", email = "christopher.joakim@gmail.com"}
+]
+description = "POC on how to extract Claude Code usage from the various ~./claude/ files and emit telemetry to OTEL/Azure"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["claude code", "usage", "telemetry", "otel", "azure"]
+classifiers = [
+  "Programming Language :: Python"
+]
+
+[project.urls]
+Homepage = "https://github.com/cjoakim/claude-code-telemetry"
+
+# See https://docs.astral.sh/ruff/rules/
+# ruff rule --all 
+
+[tool.ruff]
+line-length = 100
+
+[tool.pylint]
+max-line-length = 120          # Set maximum line length
+output-format = "colorized"    # Set output format
