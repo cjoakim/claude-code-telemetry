@@ -1,20 +1,22 @@
 # claude-code-telemetry
-http
-POC on how to extract **Claude Code** usage from the various ~./claude/ files 
-and **emit telemetry to OTEL/Azure**.
 
-**Cursor** support may be added to this repo at a later date.
+Exploratory repo on how to capture **Claude Code** usage telemetry with 
+**OpenTelemetry (OTEL)** receivers, both on localhost and in Azure.
+
+Support for **Cursor** and other AI tools may be added to this repo at a later date.
 
 ## The Problem to Solve
 
 - Claude Code is an excellent AI tool/assistant
-- However, it provides little insight into when it calls LLM(s) and the token utilization
-- It provides little insight on how/when/if Skills and Sub-agents are called
+- However, it provides little insight into when it calls LLM(s)
+  - This includes the prompts, the invoked models, and the token utilization
+- It also provides little insight on how/when/if Skills and Sub-agents are called
+- Tools such as [ccusage](https://ccusage.com/) are useful but they are not granular enough
 
 ### Solution Goals
 
 - Collecting and viewing this telemetry either locally, or to Azure
-- Utilize the OpenTelemetry (OTEL) standard API
+- Utilize the [OpenTelemetry (OTEL) standard](https://opentelemetry.io/)
 - If custom code is required, then use Python
 
 ### Solutions in this Repo
@@ -26,10 +28,11 @@ This repo explores three ways to solve this problem:
 
 ### System Requirements
 
-- Claude Code 
-- Docker Desktop (for telemetry sent to localhost)
-- Azure App Insights and Azure Log Analytics (for telemetry sent to Azure)
-- Python 3.13 (for custom solution)
+- **Claude Code**
+- **Docker Desktop** (for localhost telemetry receivers)
+- **Azure App Insights** and **Azure Log Analytics** (for telemetry sent to Azure)
+- **Python 3.13** (for the custom solution)
+- **uv** python package manager, see https://docs.astral.sh/uv/
 
 ---
 
@@ -173,5 +176,46 @@ Therefore, Solution 2 will be explored at a later date.
 
 ## Solution 3: Custom Python-based solution to emit OTEL telemetry
 
-- Claude Code writes local files to the ~/.claude/ directory as it executes
-  - This directory structure doesn't seem to be documented
+
+### Getting Started
+
+- Clone this repo and cd into its' root directory, then cd into the **python/ directory**
+- Execute either venv.ps1 (on Windows 11) or venv.sh (bash, on macOS or Linux)
+  - This creates the python virtual environment and installs the necessary libraries
+- Be sure to have the environment variables shown above, for a localhost OTEL receiver
+- Also set environment variable **APPLICATIONINSIGHTS_CONNECTION_STRING**
+  - You will find this value in Azure Portal, on the overview page of your Azure Application Insights instance
+- Activate the virtual environment
+```
+.\.venv\Scripts\activate    # Windows
+- or - 
+source .venv/bin/activate   # bash
+```
+
+### Directory structure of the ~/.claude/ directory
+
+Only the interesting parts, for data extraction, are shown here.
+
+```
+...
+├── history.jsonl    <-- everthing is logged here
+...
+├── projects
+│   ├── -Users-cjoakim-github-claude-code-telemetry-python   <--- this repo
+│   ├── -Users-cjoakim-github-zero-to-AI
+...
+```
+
+---
+
+## Addendum
+
+### ccusage sample output
+
+See https://ccusage.com/
+
+Only Session-level granularity is available.  For example, from **ccusage blocks**.
+
+<p align="center">
+   <img src="docs/img/ccusage-blocks.png" width="80%">
+</p>
