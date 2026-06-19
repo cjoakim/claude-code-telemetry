@@ -132,7 +132,9 @@ class ClaudeTelemetryUtil:
             print(traceback.format_exc())
             return 0
 
-    def project_session_events(self, claude_proj_dir: str, session_id: str, history_epoch: int) -> None:
+    def project_session_events(
+        self, claude_proj_dir: str, session_id: str, history_epoch: int
+    ) -> None:
         try:
             if os.path.isdir(claude_proj_dir):
                 for session_file in os.listdir(claude_proj_dir):
@@ -140,13 +142,17 @@ class ClaudeTelemetryUtil:
                         if session_file.endswith(".jsonl"):
                             fq_session_file = os.path.join(claude_proj_dir, session_file)
                             events = FileIO.read_jsonl_file(fq_session_file)
-                            print(f"ClaudeUtil#project_session_events - fq_session_file: {fq_session_file} - {len(events)} events")
+                            print(
+                                f"ClaudeUtil#project_session_events - fq_session_file: {fq_session_file} - {len(events)} events"
+                            )
                             for event in events:
                                 if "message" in event.keys():
                                     msg = event["message"]
                                     if "model" in msg.keys():
                                         if "timestamp" in event.keys():
-                                            event_epoch = self.timestamp_str_to_epoch(event["timestamp"])
+                                            event_epoch = self.timestamp_str_to_epoch(
+                                                event["timestamp"]
+                                            )
                                             if event_epoch >= history_epoch:
                                                 event["epoch"] = event_epoch
                                                 event["model"] = msg["model"]
@@ -223,7 +229,9 @@ class ClaudeTelemetryUtil:
                 ts = timestamp
             with open(file=self.last_history_file, encoding="utf-8", mode="wt") as file:
                 file.write(str(ts))
-            print(f"ClaudeUtil#write_last_history_timestamp - {timestamp} -> {self.last_history_file}")
+            print(
+                f"ClaudeUtil#write_last_history_timestamp - {timestamp} -> {self.last_history_file}"
+            )
             return True
         except Exception as e:
             print(traceback.format_exc())

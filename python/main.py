@@ -4,13 +4,16 @@ uv run main.py claude_telemetry_extract --shallow
 uv run main.py claude_telemetry_extract --deep
 uv run main.py claude_telemetry_extract --deep --since <epoch>
 uv run main.py claude_telemetry_extract --deep --since 1781807840000
-uv run main.py claude_telemetry_extract --hooks
+uv run main.py claude_telemetry_extract --hooks  # TODO implement
+uv run main.py emit_otel_telemetry ~/.claudex/data/telemetry_1781881902547.json --azure
+uv run main.py emit_otel_telemetry ~/.claudex/data/telemetry_1781881902547.json --local
+uv run main.py emit_otel_telemetry ~/.claudex/data/telemetry_1781881902547.json --azure --local
 uv run main.py zip_claude_directory <directory>
 uv run main.py zip_claude_directory ~/some/path/.claude
 """
 
-import json
 import logging
+import os
 import sys
 import traceback
 
@@ -19,6 +22,7 @@ from dotenv import load_dotenv
 
 from src.aitools.claude_telemetry_util import ClaudeTelemetryUtil
 from src.aitools.claude_zip_util import ClaudeZipUtil
+from src.aitools.otel_emitter import OtelEmitter
 from src.io.fileio import FileIO
 
 # Chris Joakim, 2026
@@ -43,6 +47,17 @@ def claude_telemetry_extract() -> None:
         print(f"util.capture_usage(deep=False) -> {filename}")
 
 
+def emit_otel_telemetry(telemetry_filename) -> None:
+    print("emit_otel_telemetry")
+    emitter = OtelEmitter()
+    telemetry_events: list[dict] = FileIO.read_json(telemetry_filename)
+
+    if "--azure" in sys.argv:
+        emitter.emit_to_azure_app_insights(telemetry_events)
+    if "--local" in sys.argv:
+        emitter.emit_to_localhost_collector(telemetry_events)
+
+
 def zip_claude_directory(directory: str) -> None:
     """Create a portable zip file of the .claude directory to port to another repo."""
     util = ClaudeZipUtil()
@@ -65,6 +80,9 @@ if __name__ == "__main__":
             func = sys.argv[1].lower()
             if func == "claude_telemetry_extract":
                 claude_telemetry_extract()
+            elif func == "emit_otel_telemetry":
+                telemetry_filename = os.path.expanduser(sys.argv[2])
+                emit_otel_telemetry(telemetry_filename)
             elif func == "zip_claude_directory":
                 if len(sys.argv) < 3:
                     print_options("Error: zip_claude_directory requires a directory argument")
