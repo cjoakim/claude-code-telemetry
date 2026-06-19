@@ -6,6 +6,8 @@ import traceback
 from datetime import datetime, timezone
 from typing import Any
 
+from src.io.fileio import FileIO
+
 
 class ClaudeTelemetryUtil:
     def __init__(self):
@@ -21,7 +23,7 @@ class ClaudeTelemetryUtil:
         self.data["metadata"] = self.metadata
         self.data["telemetry_events"] = self.telemetry_events
 
-    def capture(self, shallow: bool = True) -> str | None:
+    def capture_usage(self, deep: bool = False) -> str | None:
         """
         Capture the recent Claude telemetry events since the last timestamp.
         Return the filename of the JSON file where self.data is written to.
@@ -50,7 +52,7 @@ class ClaudeTelemetryUtil:
                     if isinstance(event_epoch, int):
                         event["event_source"] = "history.jsonl"
                         self.telemetry_events.append(event)
-                        if not shallow:
+                        if deep == True:
                             self.process_history_event(event)
                         self.last_timestamp = max(self.last_timestamp, event_epoch)
                 except Exception as e:
@@ -59,20 +61,23 @@ class ClaudeTelemetryUtil:
 
             self.filter_captured_telemetry()
             outfile = os.path.join(self.data_dir, f"telemetry_{self.last_timestamp}.json")
-            self.write_json_file(self.data, outfile)
+            FileIO.write_json(self.data, outfile)
             print(
-                f"ClaudeTelemetryUtil#capture - wrote {len(self.telemetry_events)} telemetry events to {outfile}"
+                f"ClaudeTelemetryUtil#capture_usage - wrote {len(self.telemetry_events)} telemetry events to {outfile}"
             )
             return outfile
         except Exception as e:
-            print(f"Exception in ClaudeTelemetryUtil#capture: {e}")
+            print(f"Exception in ClaudeTelemetryUtil#capture_usage: {e}")
             print(traceback.format_exc())
             return None
+
+    def capture_hooks(self) -> str | None:
+        return ""  # TODO implement
 
     def read_new_history_events(self) -> list[dict]:
         filtered = []
         try:
-            history = self.read_jsonl_file(self.history_file)
+            history = FileIO.read_jsonl_file(self.history_file)
             print(f"{len(history)} history events read from {self.history_file}")
             for event in history:
                 print(json.dumps(event, indent=2))
@@ -116,7 +121,7 @@ class ClaudeTelemetryUtil:
                     if session_file.startswith(session_id):
                         fq_session_file = os.path.join(claude_proj_dir, session_file)
                         print(f"ClaudeUtil#project_session_events - {fq_session_file}")
-                        #events = self.read_jsonl_file(fq_session_file)
+                        # events = FileIO.read_jsonl_file(fq_session_file)
                         events = []
                         print(
                             f"ClaudeUtil#project_session_events - {fq_session_file} - {len(events)} events"
@@ -174,16 +179,6 @@ class ClaudeTelemetryUtil:
 
     # IO methods below
 
-    def read_jsonl_file(self, jsonl_filename: str) -> list[dict]:
-        events = []
-        with open(file=jsonl_filename, encoding="utf-8", mode="rt") as file:
-            for line in file:
-                try:
-                    events.append(json.loads(line))
-                except Exception as e:
-                    print(traceback.format_exc())
-        return events
-
     def read_last_history_timestamp(self) -> int:
         try:
             with open(file=self.last_history_file, encoding="utf-8", mode="rt") as file:
@@ -200,15 +195,6 @@ class ClaudeTelemetryUtil:
             with open(file=self.last_history_file, encoding="utf-8", mode="wt") as file:
                 file.write(str(ts))
             print(f"ClaudeUtil#write_last_history_timestamp - {timestamp}")
-            return True
-        except Exception as e:
-            print(traceback.format_exc())
-            return False
-
-    def write_json_file(self, data, outfile: str) -> bool:
-        try:
-            with open(file=outfile, encoding="utf-8", mode="wt") as file:
-                file.write(json.dumps(data, indent=2))
             return True
         except Exception as e:
             print(traceback.format_exc())

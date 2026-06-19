@@ -1,6 +1,8 @@
 """
 Usage:
-uv run main.py claude_telemetry_extract
+uv run main.py claude_telemetry_extract --shallow
+uv run main.py claude_telemetry_extract --deep
+uv run main.py claude_telemetry_extract --hooks
 uv run main.py zip_claude_directory <directory>
 uv run main.py zip_claude_directory ~/some/path/.claude
 """
@@ -28,11 +30,19 @@ def print_options(msg):
 
 def claude_telemetry_extract() -> None:
     util = ClaudeTelemetryUtil()
-    filename = util.capture()
-    print(f"util.capture() -> {filename}")
+    if "--hooks" in sys.argv:
+        filename = util.capture_hooks()
+        print(f"util.capture_hooks() -> {filename}")
+    elif "--deep" in sys.argv:
+        filename = util.capture_usage(deep=True)
+        print(f"util.capture_usage(deep=True) -> {filename}")
+    else:
+        filename = util.capture_usage(deep=False)
+        print(f"util.capture_usage(deep=False) -> {filename}")
 
 
 def zip_claude_directory(directory: str) -> None:
+    """Create a portable zip file of the .claude directory to port to another repo."""
     util = ClaudeZipUtil()
     filename = util.zip_claude_directory(directory)
     print(f"util.zip_claude_directory() -> {filename}")

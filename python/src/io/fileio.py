@@ -127,6 +127,18 @@ class FileIO:
         return None
 
     @classmethod
+    def read_jsonl_file(cls, jsonl_filename: str) -> list[dict]:
+        """Read the given jsonl filename, return a list of dicts"""
+        objects = []
+        with open(file=jsonl_filename, encoding="utf-8", mode="rt") as file:
+            for line in file:
+                try:
+                    objects.append(json.loads(line))
+                except Exception as e:
+                    print(traceback.format_exc())
+        return objects
+
+    @classmethod
     def read_csv_as_dicts(
         cls, infile: str, delim=",", dialect="excel", encoding="utf-8", mode="rt"
     ) -> list[dict] | None:
