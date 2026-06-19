@@ -2,6 +2,8 @@
 Usage:
 uv run main.py claude_telemetry_extract --shallow
 uv run main.py claude_telemetry_extract --deep
+uv run main.py claude_telemetry_extract --deep --since <epoch>
+uv run main.py claude_telemetry_extract --deep --since 1781807840000
 uv run main.py claude_telemetry_extract --hooks
 uv run main.py zip_claude_directory <directory>
 uv run main.py zip_claude_directory ~/some/path/.claude

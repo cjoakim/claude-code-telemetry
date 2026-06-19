@@ -1,6 +1,8 @@
+import getpass
 import json
 import os
 import socket
+import sys
 import time
 import traceback
 from datetime import datetime, timezone
@@ -22,6 +24,7 @@ class ClaudeTelemetryUtil:
         self.telemetry_events = []
         self.data["metadata"] = self.metadata
         self.data["telemetry_events"] = self.telemetry_events
+        self.user = getpass.getuser()
 
     def capture_usage(self, deep: bool = False) -> str | None:
         """
@@ -31,6 +34,10 @@ class ClaudeTelemetryUtil:
         """
         try:
             self.prev_timestamp = self.read_last_history_timestamp()
+            if "--since" in sys.argv:
+                since_epoch = int(sys.argv[sys.argv.index("--since") + 1])
+                if since_epoch > 0:
+                    self.prev_timestamp = since_epoch
             self.metadata["prev_timestamp"] = self.prev_timestamp
             self.metadata["curr_timestamp"] = self.curr_timestamp
             self.metadata["hostname"] = socket.gethostname()
@@ -57,7 +64,7 @@ class ClaudeTelemetryUtil:
                         self.last_timestamp = max(self.last_timestamp, event_epoch)
                 except Exception as e:
                     print(traceback.format_exc())
-            self.write_last_history_timestamp(0)  # TODO change 0 to self.last_timestamp
+            self.write_last_history_timestamp(self.last_timestamp)
 
             self.filter_captured_telemetry()
             outfile = os.path.join(self.data_dir, f"telemetry_{self.last_timestamp}.json")
@@ -91,44 +98,66 @@ class ClaudeTelemetryUtil:
     def process_history_event(self, history_event: dict) -> list[dict]:
         project_activity = []
         try:
+            history_epoch = int(history_event["timestamp"])
             execution_path = history_event["project"]
             session_id = history_event["sessionId"]
             claude_proj_dir = self.execution_path_as_claude_project_path(execution_path)
-            self.project_session_events(claude_proj_dir, session_id)
+            self.project_session_events(claude_proj_dir, session_id, history_epoch)
         except Exception as e:
             print(traceback.format_exc())
         return project_activity
 
     def execution_path_as_claude_project_path(self, execution_path: str) -> str:
+        """
+        Translate a filesystem path to a directory name in the ~/.claude/projects directory.
+        Example:
+        /Users/elsa/github/claude-code-telemetry -> -Users-elsa-github-claude-code-telemetry
+        """
         pname = execution_path.replace("/", "-")
+        print(f"{execution_path} -> {pname} -> {os.path.expanduser(f'~/.claude/projects/{pname}')}")
         return os.path.expanduser(f"~/.claude/projects/{pname}")
 
     def timestamp_str_to_epoch(self, timestamp_str: str) -> int:
-        """Given a timestamp string like '2026-06-17T15:29:23.377Z', return epoch milliseconds."""
+        """
+        Given a timestamp string like '2026-06-17T15:29:23.377Z',
+        return the corresponding epoch milliseconds value.
+        Return 0 if unable to convert the timestamp string to an int.
+        """
         try:
             dt = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
             return int(dt.timestamp() * 1000)
-        except Exception as e:
+        except:
             print(traceback.format_exc())
             return 0
 
-    def project_session_events(self, claude_proj_dir: str, session_id: str) -> None:
+    def project_session_events(self, claude_proj_dir: str, session_id: str, history_epoch: int) -> None:
         try:
             if os.path.isdir(claude_proj_dir):
                 for session_file in os.listdir(claude_proj_dir):
                     if session_file.startswith(session_id):
-                        fq_session_file = os.path.join(claude_proj_dir, session_file)
-                        print(f"ClaudeUtil#project_session_events - {fq_session_file}")
-                        # events = FileIO.read_jsonl_file(fq_session_file)
-                        events = []
-                        print(
-                            f"ClaudeUtil#project_session_events - {fq_session_file} - {len(events)} events"
-                        )
-                        for event in events:
-                            event["event_source"] = f"session_file_{session_id}"
-                            self.telemetry_events.append(event)
+                        if session_file.endswith(".jsonl"):
+                            fq_session_file = os.path.join(claude_proj_dir, session_file)
+                            events = FileIO.read_jsonl_file(fq_session_file)
+                            print(f"ClaudeUtil#project_session_events - fq_session_file: {fq_session_file} - {len(events)} events")
+                            for event in events:
+                                if "message" in event.keys():
+                                    msg = event["message"]
+                                    if "model" in msg.keys():
+                                        if "timestamp" in event.keys():
+                                            event_epoch = self.timestamp_str_to_epoch(event["timestamp"])
+                                            if event_epoch >= history_epoch:
+                                                event["epoch"] = event_epoch
+                                                event["model"] = msg["model"]
+                                                event_source = dict()
+                                                event_source["project"] = claude_proj_dir
+                                                event_source["session"] = session_id
+                                                event_source["user"] = self.user
+                                                event["_event_source"] = event_source
+                                                print(json.dumps(event, indent=2))
+                                self.telemetry_events.append(event)
+                        print(f"ClaudeUtil#project_session_events - session_file: {session_file}")
         except Exception as e:
             print(traceback.format_exc())
 
@@ -194,7 +223,7 @@ class ClaudeTelemetryUtil:
                 ts = timestamp
             with open(file=self.last_history_file, encoding="utf-8", mode="wt") as file:
                 file.write(str(ts))
-            print(f"ClaudeUtil#write_last_history_timestamp - {timestamp}")
+            print(f"ClaudeUtil#write_last_history_timestamp - {timestamp} -> {self.last_history_file}")
             return True
         except Exception as e:
             print(traceback.format_exc())
