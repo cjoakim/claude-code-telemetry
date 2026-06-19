@@ -1,6 +1,6 @@
 # Usage:
-#   docker compose -f otel-compose.yml up
-#   docker compose -f otel-compose.yml down
+#   docker compose -f jaeger-compose.yml up
+#   docker compose -f jaeger-compose.yml down
 #
 # Ports:
 #   4317: gRPC OTLP
