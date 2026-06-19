@@ -185,6 +185,7 @@ Therefore, Solution 2 will be explored at a later date.
 - Be sure to have the environment variables shown above, for a localhost OTEL receiver
 - Also set environment variable **APPLICATIONINSIGHTS_CONNECTION_STRING**
   - You will find this value in Azure Portal, on the overview page of your Azure Application Insights instance
+  - You can optionally set the environment variables for Solution 3 in a **python/.env** file
 - Activate the virtual environment
 ```
 .\.venv\Scripts\activate    # Windows

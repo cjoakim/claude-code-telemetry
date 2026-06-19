@@ -6,8 +6,6 @@ import traceback
 from datetime import datetime, timezone
 from typing import Any
 
-# uv run src/aitools/claude_telemetry_util.py
-
 
 class ClaudeTelemetryUtil:
     def __init__(self):
@@ -212,12 +210,3 @@ class ClaudeTelemetryUtil:
         except Exception as e:
             print(traceback.format_exc())
             return False
-
-
-if __name__ == "__main__":
-    try:
-        util = ClaudeTelemetryUtil()
-        filename = util.capture()
-        print(f"util.capture() -> {filename}")
-    except Exception as e:
-        print(traceback.format_exc())

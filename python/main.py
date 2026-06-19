@@ -11,6 +11,7 @@ import traceback
 from docopt import docopt
 from dotenv import load_dotenv
 
+from src.aitools.claude_telemetry_util import ClaudeTelemetryUtil
 from src.io.fileio import FileIO
 
 # Chris Joakim, 2026
@@ -23,7 +24,9 @@ def print_options(msg):
 
 
 def claude_telemetry_extract() -> None:
-    pass
+    util = ClaudeTelemetryUtil()
+    filename = util.capture()
+    print(f"util.capture() -> {filename}")
 
 
 def init_logging() -> None:
