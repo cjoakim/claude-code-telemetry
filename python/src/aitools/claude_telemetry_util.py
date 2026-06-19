@@ -10,8 +10,8 @@ from typing import Any
 class ClaudeTelemetryUtil:
     def __init__(self):
         self.history_file = os.path.expanduser("~/.claude/history.jsonl")
-        self.last_history_file = os.path.expanduser("~/claudelog/history_timestamp.txt")
-        self.data_dir = os.path.expanduser("~/claudelog/data")
+        self.last_history_file = os.path.expanduser("~/.claudex/history_timestamp.txt")
+        self.data_dir = os.path.expanduser("~/.claudex/data")
         self.prev_timestamp = 0
         self.curr_timestamp = int(time.time() * 1000)
         self.last_timestamp = 0
@@ -21,7 +21,7 @@ class ClaudeTelemetryUtil:
         self.data["metadata"] = self.metadata
         self.data["telemetry_events"] = self.telemetry_events
 
-    def capture(self) -> str | None:
+    def capture(self, shallow: bool = True) -> str | None:
         """
         Capture the recent Claude telemetry events since the last timestamp.
         Return the filename of the JSON file where self.data is written to.
@@ -50,7 +50,8 @@ class ClaudeTelemetryUtil:
                     if isinstance(event_epoch, int):
                         event["event_source"] = "history.jsonl"
                         self.telemetry_events.append(event)
-                        self.process_history_event(event)
+                        if not shallow:
+                            self.process_history_event(event)
                         self.last_timestamp = max(self.last_timestamp, event_epoch)
                 except Exception as e:
                     print(traceback.format_exc())
@@ -114,7 +115,9 @@ class ClaudeTelemetryUtil:
                 for session_file in os.listdir(claude_proj_dir):
                     if session_file.startswith(session_id):
                         fq_session_file = os.path.join(claude_proj_dir, session_file)
-                        events = self.read_jsonl_file(fq_session_file)
+                        print(f"ClaudeUtil#project_session_events - {fq_session_file}")
+                        #events = self.read_jsonl_file(fq_session_file)
+                        events = []
                         print(
                             f"ClaudeUtil#project_session_events - {fq_session_file} - {len(events)} events"
                         )
