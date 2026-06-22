@@ -1,3 +1,7 @@
+# Zip selected contents of a Claude Code .claude directory into python/tmp/.
+# Includes agents/, commands/, hooks/, skills/ subdirs and settings*.json files.
+# Chris Joakim, 2026
+
 import glob
 import os
 import traceback
@@ -7,12 +11,29 @@ from pathlib import Path
 
 
 class ClaudeZipUtil:
+    """Package a .claude directory's configuration files into a zip archive."""
+
     INCLUDE_DIRS = ("agents", "commands", "hooks", "skills")
 
     def __init__(self):
+        """Initialize a ClaudeZipUtil instance."""
         pass
 
     def zip_claude_directory(self, fq_source_dir: str) -> str | None:
+        """
+        Zip configuration subdirs and settings files from a .claude directory.
+
+        Walks INCLUDE_DIRS under the source directory and adds any settings*.json
+        files at the top level. The archive is written to tmp/<basename>.zip
+        relative to the current working directory (typically python/).
+
+        Args:
+            fq_source_dir: Absolute or user-expandable path to the .claude directory.
+
+        Returns:
+            The path to the created zip file, or None if the source is missing
+            or an error occurs.
+        """
         try:
             source_dir = os.path.abspath(os.path.expanduser(fq_source_dir))
             print(f"ClaudeZipUtil#zip_claude_directory - source_dir -> {source_dir}")
