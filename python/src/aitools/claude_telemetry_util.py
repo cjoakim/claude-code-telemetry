@@ -1,3 +1,8 @@
+# Extract Claude Code usage telemetry from ~/.claude history and session JSONL files.
+# Reads history.jsonl for new sessions, optionally loads per-session events, filters
+# to model-usage events, and writes JSON output to ~/.claudex/data/.
+# Chris Joakim, 2026
+
 import getpass
 import json
 import os
@@ -12,7 +17,10 @@ from src.io.fileio import FileIO
 
 
 class ClaudeTelemetryUtil:
+    """Read Claude Code history and session files and export model-usage telemetry."""
+
     def __init__(self):
+        """Initialize paths, timestamps, and the in-memory telemetry payload."""
         self.history_file = os.path.expanduser("~/.claude/history.jsonl")
         self.last_history_file = os.path.expanduser("~/.claudex/history_timestamp.txt")
         self.data_dir = os.path.expanduser("~/.claudex/data")
@@ -28,9 +36,18 @@ class ClaudeTelemetryUtil:
 
     def capture_usage(self, deep: bool = False) -> str | None:
         """
-        Capture the recent Claude telemetry events since the last timestamp.
-        Return the filename of the JSON file where self.data is written to.
-        Return None if no data was captured.
+        Capture Claude telemetry events since the last recorded timestamp.
+
+        Reads new entries from ~/.claude/history.jsonl. When deep is True, also
+        loads matching session JSONL files from ~/.claude/projects/. Filters to
+        events with model usage, writes JSON to ~/.claudex/data/, and updates the
+        watermark file.
+
+        Args:
+            deep: When True, load per-session events for each new history entry.
+
+        Returns:
+            Path to the written JSON file, or None if nothing was captured.
         """
         try:
             self.prev_timestamp = self.read_last_history_timestamp()
@@ -79,9 +96,16 @@ class ClaudeTelemetryUtil:
             return None
 
     def capture_hooks(self) -> str | None:
+        """Capture hook-related telemetry. Not yet implemented."""
         return ""  # TODO implement
 
     def read_new_history_events(self) -> list[dict]:
+        """
+        Return history.jsonl events with timestamps after self.prev_timestamp.
+
+        Returns:
+            List of history event dicts newer than the current watermark.
+        """
         filtered = []
         try:
             history = FileIO.read_jsonl_file(self.history_file)
@@ -96,6 +120,18 @@ class ClaudeTelemetryUtil:
         return filtered
 
     def process_history_event(self, history_event: dict) -> list[dict]:
+        """
+        Load session JSONL events for a single history entry.
+
+        Resolves the project path to a ~/.claude/projects/ directory and reads
+        session files matching the history event's sessionId.
+
+        Args:
+            history_event: One record from history.jsonl (project, sessionId, timestamp).
+
+        Returns:
+            Project activity list (currently always empty; events append to self.telemetry_events).
+        """
         project_activity = []
         try:
             history_epoch = int(history_event["timestamp"])
@@ -109,9 +145,20 @@ class ClaudeTelemetryUtil:
 
     def execution_path_as_claude_project_path(self, execution_path: str) -> str:
         """
-        Translate a filesystem path to a directory name in the ~/.claude/projects directory.
+        Map a workspace path to its ~/.claude/projects/ directory.
+
+        Replaces path separators with hyphens to match Claude Code's project
+        directory naming.
+
         Example:
-        /Users/elsa/github/claude-code-telemetry -> -Users-elsa-github-claude-code-telemetry
+            /Users/elsa/github/claude-code-telemetry
+            -> ~/.claude/projects/-Users-elsa-github-claude-code-telemetry
+
+        Args:
+            execution_path: Absolute filesystem path of the Claude Code project.
+
+        Returns:
+            Expanded path to the matching projects subdirectory.
         """
         pname = execution_path.replace("/", "-")
         print(f"{execution_path} -> {pname} -> {os.path.expanduser(f'~/.claude/projects/{pname}')}")
@@ -119,9 +166,13 @@ class ClaudeTelemetryUtil:
 
     def timestamp_str_to_epoch(self, timestamp_str: str) -> int:
         """
-        Given a timestamp string like '2026-06-17T15:29:23.377Z',
-        return the corresponding epoch milliseconds value.
-        Return 0 if unable to convert the timestamp string to an int.
+        Convert an ISO-8601 timestamp string to epoch milliseconds.
+
+        Args:
+            timestamp_str: Value such as '2026-06-17T15:29:23.377Z'.
+
+        Returns:
+            Epoch milliseconds, or 0 if conversion fails.
         """
         try:
             dt = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
@@ -135,6 +186,17 @@ class ClaudeTelemetryUtil:
     def project_session_events(
         self, claude_proj_dir: str, session_id: str, history_epoch: int
     ) -> None:
+        """
+        Append session JSONL events at or after history_epoch to telemetry_events.
+
+        Scans claude_proj_dir for <session_id>*.jsonl files and enriches model
+        events with epoch, model name, and _event_source metadata.
+
+        Args:
+            claude_proj_dir: Path under ~/.claude/projects/ for the workspace.
+            session_id: Session identifier from the history entry.
+            history_epoch: Minimum event timestamp (ms) to include.
+        """
         try:
             if os.path.isdir(claude_proj_dir):
                 for session_file in os.listdir(claude_proj_dir):
@@ -168,6 +230,12 @@ class ClaudeTelemetryUtil:
             print(traceback.format_exc())
 
     def filter_captured_telemetry(self) -> None:
+        """
+        Keep only events with model usage and attach parent event chains.
+
+        Replaces self.telemetry_events with the filtered list and updates
+        self.data["telemetry_events"].
+        """
         events_by_uuid = dict()
         for event in self.telemetry_events:
             if "uuid" in event.keys():
@@ -190,6 +258,18 @@ class ClaudeTelemetryUtil:
         parent_events: list[dict],
         visited: set[str] | None = None,
     ) -> list[dict]:
+        """
+        Walk parentUuid links and collect ancestor events with model usage.
+
+        Args:
+            events_by_uuid: All captured events keyed by uuid.
+            event: Starting event whose parent chain should be traversed.
+            parent_events: Output list; matching parents are appended in place.
+            visited: Uuids already visited (guards against cycles).
+
+        Returns:
+            The parent_events list (same object passed in).
+        """
         try:
             if visited is None:
                 visited = set()
@@ -206,6 +286,15 @@ class ClaudeTelemetryUtil:
             print(traceback.format_exc())
 
     def event_has_model_usage(self, event: dict) -> bool:
+        """
+        Return True if the event contains a message with a model field.
+
+        Args:
+            event: A telemetry or session event dict.
+
+        Returns:
+            True when event["message"]["model"] is present.
+        """
         if "message" in event.keys():
             msg = event["message"]
             if "model" in msg.keys():
@@ -215,6 +304,12 @@ class ClaudeTelemetryUtil:
     # IO methods below
 
     def read_last_history_timestamp(self) -> int:
+        """
+        Read the watermark timestamp from ~/.claudex/history_timestamp.txt.
+
+        Returns:
+            Last processed epoch milliseconds, or 0 if the file is missing.
+        """
         try:
             with open(file=self.last_history_file, encoding="utf-8", mode="rt") as file:
                 return int(file.read().strip())
@@ -223,6 +318,15 @@ class ClaudeTelemetryUtil:
             return 0
 
     def write_last_history_timestamp(self, timestamp: int) -> bool:
+        """
+        Persist the watermark timestamp to ~/.claudex/history_timestamp.txt.
+
+        Args:
+            timestamp: Epoch milliseconds to record as the last processed time.
+
+        Returns:
+            True on success, False on error.
+        """
         try:
             ts = int(time.time())
             if isinstance(timestamp, int):
