@@ -485,6 +485,14 @@ util.capture_usage(deep=True) -> /Users/cjoakim/.claudex/data/telemetry_17819814
 As you can see from the output, file **~/.claudex/data/telemetry_1781981432702.json**
 contains the extracted telemetry events.
 
+If you run this extraction process again, with no additional Claude activity,
+you'll see that the extractor found zero new events to capture as telemetry.
+```
+0 new_history_events since 1781981432702
+no new history events
+util.capture_usage(deep=True) -> None
+```
+
 #### Emit
 
 You can emit this captured telemetry to either a localhost or Azure-based OTEL
@@ -500,16 +508,42 @@ uv run main.py emit_otel_telemetry ~/.claudex/data/telemetry_1781981432702.json 
 uv run main.py emit_otel_telemetry ~/.claudex/data/telemetry_1781981432702.json --local
 
 ...
+{
+  ...
+    "attributes": {
+        "event.uuid": "947bcd0a-bb38-48d7-8894-54c9602a498a",
+        "event.session_id": "7615a361-e65f-4c4b-8b00-19f43ad4daf5",
+        "event.type": "assistant",
+        "event.cwd": "/Users/cjoakim/github/claude-code-telemetry",
+        "event.git_branch": "main",
+        "event.request_id": "req_011CcF1eJuoySETcUtHmERYb",
+        "event.version": "2.1.183",
+        "llm.model": "claude-sonnet-4-6",
+        "batch.name": "batch1",
+        "llm.usage.input_tokens": 1,
+        "llm.usage.output_tokens": 41,
+        "llm.usage.cache_creation_input_tokens": 4866,
+        "llm.usage.cache_read_input_tokens": 58714
+    },
+    "events": [],
+    "links": [],
+    "resource": {
+        "attributes": {
+            "service.name": "claude-code-telemetry"
+        },
+        "schema_url": ""
+    }
+}
 OtelEmitter#emit_to_localhost_collector - emitted 877 events
 ```
 
 The emitter program currently sleeps for 0.1 seconds between sending events
-so as to not overrun the receiving process.  Each message is logged as JSON,
-but this output is not shown here.
+so as to not overrun the receiving process.  Each message is logged as JSON.
 
 It will take several seconds for the events to show in the the 
 **Jaeger UI at http://localhost:16686/**.
 
+The telemetry in the Jaeger UI looks similar to the screenshot previously shown above.
 
 **Run the emitter to Azure:**
 
