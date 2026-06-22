@@ -26,10 +26,16 @@ exist in the repo, but the solutions have not yet been tested on Windows.
 
 ### Solutions in this Repo
 
-This repo explores three ways to solve this problem:
-- 1. Per the Claude Code documentation, send OTEL telemetry to a localhost container
-- 2. Per the Claude Code documentation, send OTEL telemetry to Azure
-- 3. With a custom python-based solution to capture and emit  OTEL telemetry
+This repo explores three ways to solve this problem; all use **OTEL**:
+- 1. **Per the Claude Code documentation, send telemetry directly to a localhost container**
+  - This repo provides a working implementation
+  - The **jaeger** container is preferred due to its' better UI
+- 2. **Per the Claude Code documentation, send telemetry directly to Azure**
+  - This solution requires Entra authentication and a client App
+  - This repo does not provide a working implementation at this time, due to the effort of the Entra auth
+- 3. **With a custom python-based solution to capture, then and emit, telemetry to either localhost or Azure**
+  - This repo provides a working implementation
+
 
 ### System Requirements
 
@@ -71,6 +77,8 @@ After these environment variables have been set **restart Claude Code**.
 ### Localhost OpenTelemetry Docker Container
 
 See https://opentelemetry.io/docs/collector/quick-start/
+
+**Note: You many want to skip ahead and use the jaeger container instead**
 
 In your shell program, start the collector with Docker Compose:
 
@@ -414,6 +422,11 @@ mkdir -p ~/.claudex/data
 ---
 
 ## Addendum
+
+### Challenges
+
+- Correlating specific Claude Skill and subagent invocations with actual usage 
+- The **"hooks"** functionality provides little useful data; you must mine/wrangle it yourself 
 
 ### ccusage sample output
 

@@ -1,6 +1,6 @@
 [project]
 name = "claude-code-telemetry"
-version = "0.1.0"
+version = "1.0.0"
 
 dependencies = [
   "azure-monitor-opentelemetry>=1.8.8",

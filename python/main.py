@@ -82,6 +82,7 @@ def emit_otel_telemetry(telemetry_filename: str) -> None:
 def zip_claude_directory(directory: str) -> None:
     """
     Create a portable zip of a .claude directory under python/tmp/.
+    This demonstrates how portable the files are between projects.
 
     Args:
         directory: Path to the .claude directory to package.
