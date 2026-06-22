@@ -427,13 +427,22 @@ mkdir -p ~/.claudex/data
 ~/.claudex/hooks-tokens.jsonl
 ```
 
+#### What about Claude Hooks? 
+
+While Claude does support the concept of **"hooks"** - intercepting pre and post events
+as Claude does its' work - I found these to be less useful for telemetry extraction.
+Reading history.jsonl and traversing those events into the project(s) seems simpler.
+I may explore this further, however, at a later date.
+
+See the **.claude/settings.json** file in this repo where the hooks are configured.
+
 ### The Python Code Implementation
 
 Now that we understand how Claude stores data in the ~/.claude/ directory,
 this section describes the Python-based implementation to extract and then
 emit the OTEL telemetry.
 
-It's a two-step process; extract then emit.
+It's a two-step process; **extract then emit**.
 
 #### The Implementation Code
 
@@ -508,8 +517,8 @@ In the case of the **--azure** option, you need to have the **APPLICATIONINSIGHT
 environment variable set.  Editing the **.env** file in the python/ directory is one easy
 way to do this.  Your .env file should be **git-ignored**.
 
-The .env file looks like this; get your value from your Application Insights instance
-in Azure Portal.
+The .env file looks like this; get your value from your **Azure Application Insights**
+instance in Azure Portal.
 ```
 APPLICATIONINSIGHTS_CONNECTION_STRING="InstrumentationKey=...
 ```
@@ -532,11 +541,21 @@ Response headers:
 2026-06-22 12:28:55 - Transmission succeeded: Item received: 4. Items accepted: 4
 ```
 
+**Events in Azure Portal:**
+
+Within several minutes the events will have traversed from your Application Insights 
+instance to your Azure Log Analytics Workspace. You can query this telemetry
+as shown below.
+
+<p align="center">
+   <img src="docs/img/claude-telemetry-in-azure-log-analytics.png" width="80%">
+</p>
+
 #### Potential Enhancements to Solution #3 
 
 Use either a timer or the **watchdog** python library to observe the history.jsonl
-file, and run both the extract and emit processes if these weren't executed 
-within the last n-seconds.
+file, and run both the extract and emit processes, in sequence, if these weren't
+already executed within the last n-seconds.
 
 ---
 
@@ -544,8 +563,10 @@ within the last n-seconds.
 
 ### Challenges
 
-- Correlating specific Claude Skill and subagent invocations with actual usage 
-- The **"hooks"** functionality provides little useful data; you must mine/wrangle it yourself 
+- Correlating specific Claude Skill and subagent invocations with actual usage
+  - Your application code could be augmented to do this
+    - Capture the epoch timestamps when the skill was invoked, and when it was completed
+    - Later do the analysis of the telemetry between these timestamps
 
 ### ccusage sample output
 
