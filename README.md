@@ -8,7 +8,7 @@ Support for **Cursor** and other AI tools may be added to this repo at a later d
 This repo has been developed on macOS.  Both bash and WindowsPowershell scripts
 exist in the repo, but the solutions have not yet been tested on Windows.
 
-**THIS REPO IS CURRENTLY A WORK-IN-PROGRESS.  EXPECTED COMPLETION DATE IS JUNE 30, 2026.**
+Please see the **Overall Conclusions** near the end of this page.
 
 ## The Problem to Solve
 
@@ -80,6 +80,9 @@ OTEL_TRACES_EXPORTER=otlp
 ```
 
 After these environment variables have been set **restart Claude Code**.
+
+Note: The custom python code in Solution 3 uses a hardcoded `localhost:4317`
+endpoint to send events to Jaeger via GRPC.
 
 ### Localhost OpenTelemetry Docker Container
 
@@ -539,7 +542,7 @@ uv run main.py emit_otel_telemetry ~/.claudex/data/telemetry_1781981432702.json 
         "schema_url": ""
     }
 }
-OtelEmitter#emit_to_localhost_collector - emitted 877 events
+OtelEmitter#emit_to_localhost_collector - emitted 877 events to localhost:4317
 ```
 
 The emitter program currently sleeps for 0.1 seconds between sending events
@@ -548,7 +551,14 @@ so as to not overrun the receiving process.  Each message is logged as JSON.
 It will take several seconds for the events to show in the the 
 **Jaeger UI at http://localhost:16686/**.
 
-The telemetry in the Jaeger UI looks similar to the screenshot previously shown above.
+You should then be able to find traces like the following in the Jaeger UI.
+
+<p align="center">
+   <img src="docs/img/jaeger-telemetry-from-python.png" width="80%">
+</p>
+
+However, the usage data is difficult to find.  And the latest data may not
+be shown in your web browser due to caching.
 
 **Run the emitter to Azure:**
 
@@ -596,6 +606,21 @@ Use either a timer or the **watchdog** python library to observe the history.jso
 file, and run both the extract and emit processes, in sequence, if these weren't
 already executed within the last n-seconds.
 
+## Overall Conclusions
+
+The current extraction of data from the **history.jsonl** file, and the session
+files with the project directories, provides a good working foundation.
+
+For localhost use, the **Jaeger** container provides OTEL support, but it's difficult
+to query the data in the UI, and your web browser may cache the results.
+
+IMO, a **CSV** file created from the extracted data, and viewed in **Excel** would
+be more user-friendly.  Alternatively, input the extracted CSV data into **sqlite3**
+rather than Excel, and easily query the data with **SQL**.
+
+For emitting the data to **Azure**, the solution 3 codebase provides a good foundation
+for your production implementation.  You need to implement **Entra** authenticalion, however.
+
 ---
 
 ## Addendum
@@ -607,15 +632,30 @@ already executed within the last n-seconds.
     - Capture the epoch timestamps when the skill was invoked, and when it was completed
     - Later do the analysis of the telemetry between these timestamps
 
-### ccusage sample output
+### ccusage
 
-See https://ccusage.com/
+ccusage is an open-source tool to analyze coding (agent) CLI token usage and costs from local data.
 
-Only Session-level granularity is available.  For example, from **ccusage blocks**.
+See https://ccusage.com/ and https://github.com/ccusage/ccusage
+
+Only Session-level or Blocks granularity is available.
+For example, from **ccusage blocks** or **ccusage session**.
 
 <p align="center">
    <img src="docs/img/ccusage-blocks.png" width="80%">
 </p>
+
+Alternative outputs; but still not granular in nature:
+```
+ccusage session --json
+
+ccusage blocks --json
+```
+
+While ccusage is implemented in **TypeScript** and runs in nodejs/npm/npx, there is
+also an emerging **Rust** implementation.  The Rust implementation references
+**sqlite3**, but at this time there is no published **"export to CSV or sqlite3"**
+functionality as of 6/22/2026.
 
 ### The Top OTEL vendors and solutions at this time
 

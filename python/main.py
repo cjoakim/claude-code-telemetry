@@ -10,9 +10,9 @@ uv run main.py claude_telemetry_extract --deep
 uv run main.py claude_telemetry_extract --deep --since <epoch>
 uv run main.py claude_telemetry_extract --deep --since 1781807840000
 uv run main.py claude_telemetry_extract --hooks  # TODO implement
-uv run main.py emit_otel_telemetry ~/.claudex/data/telemetry_1781881902547.json --azure
-uv run main.py emit_otel_telemetry ~/.claudex/data/telemetry_1781881902547.json --local
-uv run main.py emit_otel_telemetry ~/.claudex/data/telemetry_1781881902547.json --azure --local
+uv run main.py emit_otel_telemetry ~/.claudex/data/telemetry_1781981432702.json --azure
+uv run main.py emit_otel_telemetry ~/.claudex/data/telemetry_1781981432702.json --local
+uv run main.py emit_otel_telemetry ~/.claudex/data/telemetry_1781981432702.json --azure --local
 uv run main.py zip_claude_directory <directory>
 uv run main.py zip_claude_directory ~/some/path/.claude
 

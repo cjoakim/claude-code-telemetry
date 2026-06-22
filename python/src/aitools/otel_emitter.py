@@ -16,10 +16,12 @@ from opentelemetry import metrics
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource, SERVICE_NAME
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
-LOCALHOST_OTLP_GRPC_ENDPOINT = "localhost:4317"
+LOCALHOST_OTLP_GRPC_ENDPOINT = (
+    "localhost:4317"  # gRPC exporter requires bare host:port, with no scheme
+)
 
 
 class OtelEmitter:
@@ -83,7 +85,7 @@ class OtelEmitter:
             resource = Resource(attributes={SERVICE_NAME: "claude-code-telemetry"})
             exporter = OTLPSpanExporter(endpoint=LOCALHOST_OTLP_GRPC_ENDPOINT, insecure=True)
             provider = TracerProvider(resource=resource)
-            provider.add_span_processor(BatchSpanProcessor(exporter))
+            provider.add_span_processor(SimpleSpanProcessor(exporter))
             trace.set_tracer_provider(provider)
             tracer = trace.get_tracer("claude-code-telemetry")
             batch_name = "batch1"
@@ -110,7 +112,10 @@ class OtelEmitter:
                     print(f"Error emitting event {event.get('uuid', '?')}: {e}")
 
             provider.shutdown()
-            print(f"OtelEmitter#emit_to_localhost_collector - emitted {count} events")
+            print(
+                f"OtelEmitter#emit_to_localhost_collector - emitted {count} events to {LOCALHOST_OTLP_GRPC_ENDPOINT}"
+            )
+            print("Visit http://localhost:16686/ with your web browser to see the traces")
             return count
         except Exception as e:
             print(f"Exception in OtelEmitter#emit_to_localhost_collector: {e}")
