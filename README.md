@@ -38,6 +38,11 @@ This repo explores three ways to solve this problem; all use **OTEL**:
 - 3. **With a custom python-based solution to capture, then and emit, telemetry to either localhost or Azure**
   - This repo provides a working implementation
 
+These solution architectures are shown here:
+
+<p align="center">
+   <img src="docs/img/solution-architecture.png" width="90%">
+</p>
 
 ### System Requirements
 
