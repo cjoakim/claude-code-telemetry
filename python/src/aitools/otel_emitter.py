@@ -28,12 +28,13 @@ class OtelEmitter:
     def __init__(self):
         """Initialize an OtelEmitter instance."""
 
-    def emit_to_azure_app_insights(self, telemetry_data: list[dict]) -> int:
+    def emit_to_azure_app_insights(self, telemetry_data: dict) -> int:
         """
         Send telemetry events to Azure Application Insights via OpenTelemetry.
 
         Configures the Azure Monitor exporter using APPLICATIONINSIGHTS_CONNECTION_STRING.
-        Each event is logged as a JSON warning on the AppInsightsLogger.
+        Each event is logged as a compact JSON warning on the AppInsightsLogger, using the
+        same attribute keys as emit_to_localhost_collector.
 
         Args:
             telemetry_data: Telemetry JSON dict with a telemetry_events list
@@ -43,18 +44,20 @@ class OtelEmitter:
             Number of events processed, or -1 on error.
         """
         try:
-            print("OtelEmitter#emit_to_localhost_collector")
+            print("OtelEmitter#emit_to_azure_app_insights")
             # This automatically reads the APPLICATIONINSIGHTS_CONNECTION_STRING environment variable
             configure_azure_monitor()
 
             app_insights_logger = logging.getLogger("AppInsightsLogger")
             app_insights_logger.setLevel(logging.WARNING)
 
-            for event in telemetry_data["telemetry_events"]:
-                print(json.dumps(event, indent=2))
-                app_insights_logger.warning(json.dumps(event))
+            events = telemetry_data.get("telemetry_events", [])
+            for event in events:
+                payload = self._event_payload(event)
+                print(json.dumps(payload, indent=2))
+                app_insights_logger.warning(json.dumps(payload))
                 time.sleep(0.1)
-            return len(telemetry_data)
+            return len(events)
         except Exception as e:
             print(f"Exception in OtelEmitter#emit_to_azure_app_insights: {e}")
             print(traceback.format_exc())
@@ -96,28 +99,8 @@ class OtelEmitter:
                     model = msg.get("model", "unknown")
 
                     span = tracer.start_span(f"claude/{model}", start_time=start_ns)
-                    span.set_attribute("event.uuid", event.get("uuid", ""))
-                    span.set_attribute("event.session_id", event.get("sessionId", ""))
-                    span.set_attribute("event.type", event.get("type", ""))
-                    span.set_attribute("event.cwd", event.get("cwd", ""))
-                    span.set_attribute("event.git_branch", event.get("gitBranch", ""))
-                    span.set_attribute("event.request_id", event.get("requestId", ""))
-                    span.set_attribute("event.version", event.get("version", ""))
-                    span.set_attribute("llm.model", model)
-                    span.set_attribute("batch.name", batch_name)
-
-                    usage = msg.get("usage", {})
-                    if usage:
-                        span.set_attribute("llm.usage.input_tokens", usage.get("input_tokens", 0))
-                        span.set_attribute("llm.usage.output_tokens", usage.get("output_tokens", 0))
-                        span.set_attribute(
-                            "llm.usage.cache_creation_input_tokens",
-                            usage.get("cache_creation_input_tokens", 0),
-                        )
-                        span.set_attribute(
-                            "llm.usage.cache_read_input_tokens",
-                            usage.get("cache_read_input_tokens", 0),
-                        )
+                    for key, value in self._event_payload(event, batch_name).items():
+                        span.set_attribute(key, value)
                     print(f"Span: {span.to_json()}")  # <class 'opentelemetry.sdk.trace._Span'>
 
                     span.end(end_time=end_ns)
@@ -133,6 +116,40 @@ class OtelEmitter:
             print(f"Exception in OtelEmitter#emit_to_localhost_collector: {e}")
             print(traceback.format_exc())
             return -1
+
+    def _event_payload(self, event: dict, batch_name: str = "batch1") -> dict:
+        """
+        Build a compact attribute dict shared by Azure and localhost emitters.
+
+        Args:
+            event: A single telemetry event from ClaudeTelemetryUtil.
+            batch_name: Batch label attached to each event.
+
+        Returns:
+            Dict of attribute keys to values (mirrors OTLP span attributes).
+        """
+        msg = event.get("message", {})
+        model = msg.get("model", "unknown")
+        payload = {
+            "event.uuid": event.get("uuid", ""),
+            "event.session_id": event.get("sessionId", ""),
+            "event.type": event.get("type", ""),
+            "event.cwd": event.get("cwd", ""),
+            "event.git_branch": event.get("gitBranch", ""),
+            "event.request_id": event.get("requestId", ""),
+            "event.version": event.get("version", ""),
+            "llm.model": model,
+            "batch.name": batch_name,
+        }
+        usage = msg.get("usage", {})
+        if usage:
+            payload["llm.usage.input_tokens"] = usage.get("input_tokens", 0)
+            payload["llm.usage.output_tokens"] = usage.get("output_tokens", 0)
+            payload["llm.usage.cache_creation_input_tokens"] = usage.get(
+                "cache_creation_input_tokens", 0
+            )
+            payload["llm.usage.cache_read_input_tokens"] = usage.get("cache_read_input_tokens", 0)
+        return payload
 
     def _iso_to_ns(self, ts_str: str) -> int:
         """
