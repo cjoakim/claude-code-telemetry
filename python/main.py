@@ -1,4 +1,9 @@
 """
+CLI entry point for Claude Code telemetry extraction, OTEL export, and .claude packaging.
+
+Dispatches on sys.argv[1] to extract telemetry from ~/.claude, emit spans to Azure
+or a local OTEL collector, or zip a .claude directory for portability.
+
 Usage:
 uv run main.py claude_telemetry_extract --shallow
 uv run main.py claude_telemetry_extract --deep
@@ -10,6 +15,8 @@ uv run main.py emit_otel_telemetry ~/.claudex/data/telemetry_1781881902547.json 
 uv run main.py emit_otel_telemetry ~/.claudex/data/telemetry_1781881902547.json --azure --local
 uv run main.py zip_claude_directory <directory>
 uv run main.py zip_claude_directory ~/some/path/.claude
+
+Chris Joakim, 2026
 """
 
 import logging
@@ -25,16 +32,21 @@ from src.aitools.claude_zip_util import ClaudeZipUtil
 from src.aitools.otel_emitter import OtelEmitter
 from src.io.fileio import FileIO
 
-# Chris Joakim, 2026
 
-
-def print_options(msg):
+def print_options(msg: str) -> None:
+    """Log an error message and print docopt usage/help to the log."""
     logging.warning(msg)
     arguments = docopt(__doc__, version="1.0.0")
     logging.warning(arguments)
 
 
 def claude_telemetry_extract() -> None:
+    """
+    Extract Claude Code telemetry and write JSON under ~/.claudex/data/.
+
+    Mode is selected from sys.argv flags: --hooks (not implemented), --deep
+    (include session JSONL events), or default shallow (history.jsonl only).
+    """
     util = ClaudeTelemetryUtil()
     if "--hooks" in sys.argv:
         filename = util.capture_hooks()
@@ -47,7 +59,16 @@ def claude_telemetry_extract() -> None:
         print(f"util.capture_usage(deep=False) -> {filename}")
 
 
-def emit_otel_telemetry(telemetry_filename) -> None:
+def emit_otel_telemetry(telemetry_filename: str) -> None:
+    """
+    Read a telemetry JSON file and emit events to configured OTEL backends.
+
+    Args:
+        telemetry_filename: Path to JSON produced by claude_telemetry_extract.
+
+    Backend flags (sys.argv): --azure for Application Insights, --local for
+    localhost:4317 OTLP gRPC. Both may be specified in one run.
+    """
     print("emit_otel_telemetry")
     emitter = OtelEmitter()
     telemetry_events: list[dict] = FileIO.read_json(telemetry_filename)
@@ -59,13 +80,19 @@ def emit_otel_telemetry(telemetry_filename) -> None:
 
 
 def zip_claude_directory(directory: str) -> None:
-    """Create a portable zip file of the .claude directory to port to another repo."""
+    """
+    Create a portable zip of a .claude directory under python/tmp/.
+
+    Args:
+        directory: Path to the .claude directory to package.
+    """
     util = ClaudeZipUtil()
     filename = util.zip_claude_directory(directory)
     print(f"util.zip_claude_directory() -> {filename}")
 
 
 def init_logging() -> None:
+    """Configure root logging with timestamped INFO-level output."""
     logging_format = "%(asctime)s - %(message)s"
     logging.basicConfig(level=logging.INFO, format=logging_format, datefmt="%Y-%m-%d %H:%M:%S")
 
