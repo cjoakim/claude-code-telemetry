@@ -1,3 +1,8 @@
+# Emit Claude Code telemetry as OpenTelemetry spans to Azure App Insights or a local collector.
+# Reads JSON payloads produced by ClaudeTelemetryUtil and exports each model-usage event
+# as a span with LLM attributes (model name, token usage, session metadata).
+# Chris Joakim, 2026
+
 import json
 import logging
 import os
@@ -18,10 +23,25 @@ LOCALHOST_OTLP_GRPC_ENDPOINT = "localhost:4317"
 
 
 class OtelEmitter:
+    """Export Claude telemetry JSON to OpenTelemetry backends."""
+
     def __init__(self):
-        pass
+        """Initialize an OtelEmitter instance."""
 
     def emit_to_azure_app_insights(self, telemetry_data: list[dict]) -> int:
+        """
+        Send telemetry events to Azure Application Insights via OpenTelemetry.
+
+        Configures the Azure Monitor exporter using APPLICATIONINSIGHTS_CONNECTION_STRING.
+        Each event is logged as a JSON warning on the AppInsightsLogger.
+
+        Args:
+            telemetry_data: Telemetry JSON dict with a telemetry_events list
+                (as written by ClaudeTelemetryUtil).
+
+        Returns:
+            Number of events processed, or -1 on error.
+        """
         try:
             print("OtelEmitter#emit_to_localhost_collector")
             # This automatically reads the APPLICATIONINSIGHTS_CONNECTION_STRING environment variable
@@ -41,6 +61,19 @@ class OtelEmitter:
             return -1
 
     def emit_to_localhost_collector(self, telemetry_data: dict) -> int:
+        """
+        Emit telemetry events as OTLP gRPC spans to a local collector.
+
+        Creates one span per event with claude/<model> name and attributes for
+        uuid, session, cwd, git branch, request id, version, and token usage.
+        Spans are exported to localhost:4317 (standard OTEL collector gRPC port).
+
+        Args:
+            telemetry_data: Telemetry JSON dict with a telemetry_events list.
+
+        Returns:
+            Number of spans emitted, or -1 on error.
+        """
         try:
             print("OtelEmitter#emit_to_localhost_collector")
 
@@ -102,7 +135,15 @@ class OtelEmitter:
             return -1
 
     def _iso_to_ns(self, ts_str: str) -> int:
-        """Convert an ISO 8601 timestamp string to nanoseconds since Unix epoch."""
+        """
+        Convert an ISO-8601 timestamp string to nanoseconds since the Unix epoch.
+
+        Args:
+            ts_str: Value such as '2026-06-17T15:29:23.377Z'.
+
+        Returns:
+            Nanoseconds since epoch, or the current time if conversion fails.
+        """
         try:
             dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
             if dt.tzinfo is None:
